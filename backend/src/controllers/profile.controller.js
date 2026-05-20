@@ -7,21 +7,28 @@ const bcrypt = require("bcrypt");
 
 async function createProfile(req, res) {
   const { profileImage, bio } = req.body;
-  // verify the user
   try {
-    const jwt = require("jsonwebtoken");
-    const token = req.cookies.token;
-
-    if (!token) return res.status(401).send("Unauthorized");
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const id = decoded.id;
-    console.log("The decoded id is", id);
-    console.log(decoded);
-
+      id = req.id;
     const user = await userModel.findOne({ _id: id });
+   console.log(user)
+    if(!user){
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
 
+      const checkProfile = await profileModel.findOne({ user: user._id });
+   console.log(checkProfile)
+    if(checkProfile){
+      return res.status(404).json({
+        message: "Profile already exist",
+      });
+    }
+
+
+    
     const profile = await profileModel.create({
+      user: user._id,
       profileImage: profileImage,
       bio: bio,
     });
@@ -31,7 +38,7 @@ async function createProfile(req, res) {
       Authuser: user,
       profile: profile,
     });
-    
+
   } catch (error) {
     console.log("error occured in create usersiginup", error.message);
     res.status(404).json({
@@ -41,24 +48,74 @@ async function createProfile(req, res) {
 }
 
 async function editProfile(req, res) {
-  res.send("hello");
-}
+  try {
+    // 1. Token se ID nikalna (Make sure aapka middleware req.id set kar raha ho)
+    const idFromToken = req.id; 
+    const { name, email, profileImage, bio } = req.body;
 
-async function showProfile(req, res) {
-  const token = req.cookies.token;
+    // 2. Pehle check karein ki Profile exist karti hai ya nahi
+    const checkProfile = await profileModel.findOne({ user: idFromToken });
+    if (!checkProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "Profile doesn't exist",
+      });
+    }
 
-  if (!token) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
+    // 3. User Model update karein (Name aur Email ke liye)
+    // { new: true } lagane se hume updated data milta hai
+    const updatedUser = await userModel.findByIdAndUpdate(
+      idFromToken,
+      { name, email },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // 4. Profile Model update karein (Bio aur Profile Image ke liye)
+    const updatedProfile = await profileModel.findOneAndUpdate(
+      { user: idFromToken },         // Search Condition
+      { bio, profileImage },         // Data to Update
+      { new: true, runValidators: true }
+    ).populate("user", "name email role");
+
+    // 5. Final Response
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: {
+        profileId: updatedProfile._id,
+        bio: updatedProfile.bio,
+        profileImage: updatedProfile.profileImage,
+        user: {
+          userId: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          role: updatedUser.role
+        }
+      }
+    });
+
+  } catch (error) {
+    console.log("Error in editProfile:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
-
+}
+async function showProfile(req, res) {
   try {
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userIdFromToken = decoded.id;
-
-    // 2. User ID ke help se Profile dhoondhi aur User details ko populate kiya
+      const  id = res.id;
     const profile = await profileModel
-      .findOne({ user: userIdFromToken }) // Search using User ID reference
+      .findOne({ user: id }) 
       .populate("user", "name email role");
 
     // 3. Agar profile nahi milti toh error handle karein
