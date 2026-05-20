@@ -1,8 +1,13 @@
-
-const App = () => {
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AuthContainer from "../src/pages/AuthContainer";
+const App= () => {
   return (
-    <div className="bg-red-600 ">App</div>
-  )
-}
+    <BrowserRouter>
+      <Routes>
+        <Route path="/authcontainer" element={<AuthContainer />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
 
-export default App
+export default App;

@@ -23,6 +23,9 @@ const userSchema = new mongoose.Schema(
       enum: ["listener", "artist"],
       default: "listener",
     },
+  
+    
+
   },
   { timestamps: true },
 );

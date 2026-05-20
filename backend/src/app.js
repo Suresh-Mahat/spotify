@@ -2,6 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const authUser = require('./routes/auth.routes')
 const profileRouters = require("./routes/profile.routes")
+const songRouters = require("./routes/song.routes")
+
+
 const cookieParser = require("cookie-parser");
 const app = express();
 
@@ -16,6 +19,8 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth",authUser)
 app.use("/api/profile",profileRouters)
+app.use("/api/song",songRouters)
+
 
 
 
